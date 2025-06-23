@@ -6,14 +6,18 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import pages.MainPage;
 import pages.OrderPage;
 import utils.WebDriverFactory;
+import java.time.Duration;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(Parameterized.class)
 public class OrderTest {
     private WebDriver driver;
+    private WebDriverWait wait;
     private MainPage mainPage;
     private OrderPage orderPage;
     private final String browser;
@@ -57,63 +61,40 @@ public class OrderTest {
     @Before
     public void setup() {
         driver = WebDriverFactory.getDriver(browser);
+        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
         driver.manage().window().maximize();
         mainPage = new MainPage(driver);
         orderPage = new OrderPage(driver);
-
-        // Открываем главную страницу и принимаем куки
         mainPage.open();
-
-        // Ждем пока страница полностью загрузится
-        try {
-            Thread.sleep(2000); // Краткая пауза для полной загрузки
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     @Test
     public void testOrderFlow() {
-        try {
-            // Выбираем точку входа (верхнюю или нижнюю кнопку заказа)
-            if ("top".equals(orderButtonLocation)) {
-                mainPage.clickOrderButtonTop();
-            } else {
-
-                mainPage.clickOrderButtonBottom();
-            }
-
-            // Ждем пока страница заказа загрузится
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            // Заполняем первую страницу заказа
-            orderPage.fillFirstStep(name, surname, address, metro, phone);
-
-            // Ждем загрузки второй страницы
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            // Заполняем вторую страницу заказа
-            orderPage.fillSecondStep(date, rentalPeriod, color, comment);
-
-            // Подтверждаем заказ
-            orderPage.confirmOrder();
-
-            // Проверяем успешное оформление заказа
-            assertTrue("Модальное окно успешного заказа не отображается",
-                    orderPage.isSuccessModalDisplayed());
-
-        } catch (Exception e) {
-            System.err.println("Ошибка в тесте для браузера " + browser + ": " + e.getMessage());
-            throw e;
+        // Выбираем точку входа (верхнюю или нижнюю кнопку заказа)
+        if ("top".equals(orderButtonLocation)) {
+            mainPage.clickOrderButtonTop();
+        } else {
+            mainPage.clickOrderButtonBottom();
         }
+
+        // Ожидаем загрузки страницы заказа
+        wait.until(ExpectedConditions.urlContains("order"));
+
+        // Заполняем первую страницу заказа
+        orderPage.fillFirstStep(name, surname, address, metro, phone);
+
+        // Ожидаем перехода на вторую страницу заказа
+        wait.until(ExpectedConditions.visibilityOfElementLocated(orderPage.getSecondStepHeaderLocator()));
+
+        // Заполняем вторую страницу заказа
+        orderPage.fillSecondStep(date, rentalPeriod, color, comment);
+
+        // Подтверждаем заказ
+        orderPage.confirmOrder();
+
+        // Проверяем успешное оформление заказа
+        assertTrue("Модальное окно успешного заказа не отображается",
+                orderPage.isSuccessModalDisplayed());
     }
     @After
     public void teardown() {

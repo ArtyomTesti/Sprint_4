@@ -31,6 +31,8 @@ public class OrderPage {
     private final By orderButton = By.xpath("//button[contains(@class, 'Button_Middle') and text()='Заказать']");
     private final By confirmButton = By.xpath("//button[text()='Да']");
     private final By successModal = By.className("Order_Modal__YZ-d3");
+    private final By secondStepHeader = By.xpath("//div[contains(text(), 'Про аренду')]");
+    private final By successOrderHeader = By.xpath("//div[contains(@class, 'Order_ModalHeader') and contains(text(), 'Заказ оформлен')]");
 
     public OrderPage(WebDriver driver) {
         this.driver = driver;
@@ -38,98 +40,83 @@ public class OrderPage {
         this.js = (JavascriptExecutor) driver;
     }
 
+    public By getSecondStepHeaderLocator() {
+        return secondStepHeader;
+    }
+
     public void fillFirstStep(String name, String surname, String address, String metro, String phone) {
-        // Ждем пока страница заказа полностью загрузится
-        wait.until(ExpectedConditions.visibilityOfElementLocated(nameField));
-
-        WebElement nameElement = wait.until(ExpectedConditions.elementToBeClickable(nameField));
-        nameElement.sendKeys(name);
-
-        driver.findElement(surnameField).sendKeys(surname);
-        driver.findElement(addressField).sendKeys(address);
+        waitForElementAndSendKeys(nameField, name);
+        waitForElementAndSendKeys(surnameField, surname);
+        waitForElementAndSendKeys(addressField, address);
         selectMetroStation(metro);
-        driver.findElement(phoneField).sendKeys(phone);
+        waitForElementAndSendKeys(phoneField, phone);
 
-        // Прокручиваем к кнопке "Далее" и кликаем
-        WebElement nextBtn = driver.findElement(nextButton);
-        js.executeScript("arguments[0].scrollIntoView(true);", nextBtn);
-        nextBtn.click();
+        clickWithScroll(nextButton);
     }
 
     private void selectMetroStation(String stationName) {
-        WebElement metroInput = wait.until(ExpectedConditions.elementToBeClickable(metroField));
-        metroInput.click();
-
+        waitForElementAndClick(metroField);
         wait.until(ExpectedConditions.visibilityOfElementLocated(metroDropdown));
 
-        for (WebElement station : driver.findElements(metroOption)) {
-            if (station.getText().equals(stationName)) {
-                js.executeScript("arguments[0].scrollIntoView(true);", station);
-                station.click();
-                return;
-            }
-        }
+        driver.findElements(metroOption).stream()
+                .filter(station -> station.getText().equals(stationName))
+                .findFirst()
+                .ifPresent(station -> {
+                    js.executeScript("arguments[0].scrollIntoView(true);", station);
+                    station.click();
+                });
     }
 
     public void fillSecondStep(String date, String rentalPeriod, String color, String comment) {
-        // Ждем пока вторая страница заказа загрузится
-        wait.until(ExpectedConditions.visibilityOfElementLocated(dateField));
+        waitForElementAndSendKeys(dateField, date);
+        driver.findElement(By.tagName("body")).click(); // Close calendar if opened
 
-        // Заполняем дату
-        WebElement dateInput = driver.findElement(dateField);
-        dateInput.clear();
-        dateInput.sendKeys(date);
+        selectRentalPeriod(rentalPeriod);
+        selectScooterColor(color);
+        waitForElementAndSendKeys(commentField, comment);
 
-        // Кликаем вне поля даты, чтобы закрыть календарь если он открылся
-        driver.findElement(By.tagName("body")).click();
+        clickWithScroll(orderButton);
+    }
 
-        // Выбираем срок аренды
-        WebElement rentalPeriodElement = wait.until(ExpectedConditions.elementToBeClickable(rentalPeriodField));
-        js.executeScript("arguments[0].scrollIntoView(true);", rentalPeriodElement);
-        rentalPeriodElement.click();
+    private void selectRentalPeriod(String rentalPeriod) {
+        waitForElementAndClick(rentalPeriodField);
+        wait.until(ExpectedConditions.elementToBeClickable(
+                        By.xpath("//div[@class='Dropdown-option' and contains(text(), '" + rentalPeriod + "')]")))
+                .click();
+    }
 
-        WebElement periodOption = wait.until(ExpectedConditions.elementToBeClickable(
-                By.xpath("//div[@class='Dropdown-option' and contains(text(), '" + rentalPeriod + "')]")));
-        periodOption.click();
-
-        // Выбираем цвет
-        if ("black".equals(color)) {
-            js.executeScript("arguments[0].click();", driver.findElement(blackPearlCheckbox));
-        } else if ("grey".equals(color)) {
-            js.executeScript("arguments[0].click();", driver.findElement(greyHopelessnessCheckbox));
-        }
-
-        // Заполняем комментарий
-        driver.findElement(commentField).sendKeys(comment);
-
-        // Кликаем кнопку заказа
-        WebElement orderBtn = wait.until(ExpectedConditions.elementToBeClickable(orderButton));
-        js.executeScript("arguments[0].scrollIntoView(true);", orderBtn);
-        orderBtn.click();
+    private void selectScooterColor(String color) {
+        By colorCheckbox = "black".equals(color) ? blackPearlCheckbox : greyHopelessnessCheckbox;
+        js.executeScript("arguments[0].click();", driver.findElement(colorCheckbox));
     }
 
     public void confirmOrder() {
-        // Ждем появления окна
         WebElement modal = wait.until(ExpectedConditions.visibilityOfElementLocated(successModal));
-
-        // Ищем кнопку "Да" именно внутри окна
         WebElement confirmBtn = modal.findElement(confirmButton);
-
-        // Проверяем кликабельность
         wait.until(ExpectedConditions.elementToBeClickable(confirmBtn));
-
-        // Кликаем
         js.executeScript("arguments[0].click();", confirmBtn);
 
-        wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.xpath("//div[contains(@class, 'Order_ModalHeader') and contains(text(), 'Заказ оформлен')]")));
+        wait.until(ExpectedConditions.visibilityOfElementLocated(successOrderHeader));
     }
 
     public boolean isSuccessModalDisplayed() {
-        try {
-            return wait.until(ExpectedConditions.visibilityOfElementLocated(successModal)).isDisplayed();
-        } catch (Exception e) {
-            return false;
-        }
+        return wait.until(ExpectedConditions.visibilityOfElementLocated(successModal)).isDisplayed();
+    }
+
+    // Вспомогательные методы
+    private void waitForElementAndClick(By locator) {
+        wait.until(ExpectedConditions.elementToBeClickable(locator)).click();
+    }
+
+    private void waitForElementAndSendKeys(By locator, String text) {
+        WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+        element.clear();
+        element.sendKeys(text);
+    }
+
+    private void clickWithScroll(By locator) {
+        WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));
+        js.executeScript("arguments[0].scrollIntoView(true);", element);
+        element.click();
     }
 }

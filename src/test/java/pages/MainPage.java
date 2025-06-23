@@ -12,6 +12,8 @@ import java.util.List;
 public class MainPage {
     private final WebDriver driver;
 
+    private static final String BASE_URL = "https://qa-scooter.praktikum-services.ru/";
+
     // Локаторы
     // Заголовок страницы
     private final By header = By.className("Header_Logo__23yGT");
@@ -31,12 +33,18 @@ public class MainPage {
     // Ответы в FAQ (список)
     private final By faqAnswers = By.xpath(".//div[@data-accordion-component='AccordionItemPanel']");
 
+    // Cookie баннер
+    private final By cookieBanner = By.className("App_CookieConsent__1yUIN");
+
+    // Кнопка принятия cookie
+    private final By acceptCookieButton = By.xpath("//button[contains(text(), 'да все привыкли')]");
+
     public MainPage(WebDriver driver) {
         this.driver = driver;
     }
 
     public void open() {
-        driver.get("https://qa-scooter.praktikum-services.ru/");
+        driver.get(BASE_URL);
         closeCookieBanner();
     }
 
@@ -68,12 +76,9 @@ public class MainPage {
     }
     public void closeCookieBanner() {
         try {
-            By cookieBanner = By.className("App_CookieConsent__1yUIN");
-            By acceptButton = By.xpath("//button[contains(text(), 'да все привыкли')]");
-
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
             if (!driver.findElements(cookieBanner).isEmpty()) {
-                WebElement button = wait.until(ExpectedConditions.elementToBeClickable(acceptButton));
+                WebElement button = wait.until(ExpectedConditions.elementToBeClickable(acceptCookieButton));
                 button.click();
                 wait.until(ExpectedConditions.invisibilityOfElementLocated(cookieBanner));
             }
