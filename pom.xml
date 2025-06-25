@@ -38,7 +38,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Логирование -->
+        <!-- логирование -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
