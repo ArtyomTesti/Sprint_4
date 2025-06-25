@@ -9,6 +9,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
 import java.util.List;
 
+
 public class MainPage {
     private final WebDriver driver;
 
@@ -54,36 +55,39 @@ public class MainPage {
 
     public void clickOrderButtonBottom() {
         WebElement element = driver.findElement(orderButtonBottom);
-        ((JavascriptExecutor)driver).executeScript("arguments[0].scrollIntoView();", element);
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView();", element);
         element.click();
     }
 
     public void expandFaqQuestion(int index) {
         List<WebElement> questions = driver.findElements(faqQuestions);
         if (index >= 0 && index < questions.size()) {
-            questions.get(index).click();
+            WebElement question = questions.get(index);
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", question);
+             new WebDriverWait(driver, Duration.ofSeconds(5))
+                    .until(ExpectedConditions.elementToBeClickable(question)).click();
         }
     }
 
     public String getFaqAnswerText(int index) {
         List<WebElement> answers = driver.findElements(faqAnswers);
         if (index >= 0 && index < answers.size()) {
-            new WebDriverWait(driver, Duration.ofSeconds(3))
-                    .until(ExpectedConditions.visibilityOf(answers.get(index)));
-            return answers.get(index).getText();
+            WebElement answer = answers.get(index);
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", answer);
+            new WebDriverWait(driver, Duration.ofSeconds(5))
+                    .until(ExpectedConditions.visibilityOf(answer));
+            return answer.getText();
         }
         return "";
     }
+
     public void closeCookieBanner() {
-        try {
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
-            if (!driver.findElements(cookieBanner).isEmpty()) {
-                WebElement button = wait.until(ExpectedConditions.elementToBeClickable(acceptCookieButton));
-                button.click();
-                wait.until(ExpectedConditions.invisibilityOfElementLocated(cookieBanner));
-            }
-        } catch (Exception e) {
-            System.out.println("Не удалось закрыть cookie-баннер: " + e.getMessage());
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
+        List<WebElement> banners = driver.findElements(cookieBanner);
+        if (!banners.isEmpty()) {
+            WebElement button = wait.until(ExpectedConditions.elementToBeClickable(acceptCookieButton));
+            button.click();
+            wait.until(ExpectedConditions.invisibilityOfElementLocated(cookieBanner));
         }
     }
 }
